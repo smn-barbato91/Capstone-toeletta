@@ -28,6 +28,10 @@ public class PetInfo {
         this.size = size;
         this.hairType = hairType;
     }
+    
+    public PetInfo() {
+      
+    }
 
 	public int getId() {
 		return id;

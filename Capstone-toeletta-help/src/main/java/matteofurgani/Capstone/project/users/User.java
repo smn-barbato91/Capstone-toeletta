@@ -123,8 +123,12 @@ public class User implements UserDetails {
        this.roleName = Role.USER;
        this.isActive = true;
    }
+   
+   
 
-    @Override
+    public User() {}
+
+	@Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(this.roleName.name()));
     }
@@ -156,7 +160,6 @@ public class User implements UserDetails {
 
 	@Override
 	public String getPassword() {
-		// TODO Auto-generated method stub
-		return null;
+		return this.password;
 	}
 }
