@@ -1,5 +1,6 @@
 package matteofurgani.Capstone.project.reservations;
 
+import matteofurgani.Capstone.project.exceptions.InvalidDateException;
 import matteofurgani.Capstone.project.exceptions.NotFoundException;
 import matteofurgani.Capstone.project.pets.PetInfo;
 import matteofurgani.Capstone.project.pets.PetInfoService;
@@ -7,6 +8,7 @@ import matteofurgani.Capstone.project.servicesType.ServiceType;
 import matteofurgani.Capstone.project.servicesType.ServiceTypeService;
 import matteofurgani.Capstone.project.utilities.costs.CostGenerator;
 
+import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,8 +33,19 @@ public class ReservationService {
 
     @Autowired
     private ServiceTypeService typeService;
-
+    
     public Reservation save(NewReservationDTO body) throws IOException{
+    	
+    	boolean isValidDate = checkDate(body.date());
+        if(!isValidDate) {
+        	throw new InvalidDateException();
+        }
+        
+        boolean reservationAlreadyExists = isReservationExists(body.date(),body.time());
+        
+        if(reservationAlreadyExists) {
+        	throw new InvalidDateException("Già esiste una prenotazione in questa data e in questa fascia oraria");
+        }
 
         ServiceType serviceType = typeService.findByName(String.valueOf(body.serviceType()));
         PetInfo petInfo = petService.findById(body.petInfoId());
@@ -44,16 +57,31 @@ public class ReservationService {
         CostGenerator cg = new CostGenerator();
         String finalCost = cg.generateProperCost(petHair,petSize, cost);
 
+        
+        
         Reservation reservation = new Reservation(body.date(), body.time(), serviceType, petInfo);
         reservation.setDate(body.date());
         reservation.setTime(body.time());
         reservation.setServiceType(serviceType);
         reservation.setPetInfo(petInfo);
         reservation.setCost(finalCost);
+        
         return rd.save(reservation);
     }
 
-    public Page<Reservation> getReservation(int page, int size, String sort){
+    public boolean isReservationExists(LocalDate date, LocalTime time) {
+    	LocalTime prevTime = time.minusHours(1); // Calcola l'ora precedente
+        LocalTime nextTime = time.plusHours(1); // Calcola l'ora successiva
+
+        long count = rd.countByDateAndTimeRange(date, prevTime, nextTime);
+        return count > 0;
+    }
+
+	private boolean checkDate(LocalDate date) {
+		return date.isAfter(LocalDate.now());
+	}
+
+	public Page<Reservation> getReservation(int page, int size, String sort){
         Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
         return rd.findAll(pageable);
     }
